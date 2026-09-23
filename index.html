@@ -106,7 +106,6 @@
   .table-neon tbody tr:hover { background-color: rgba(109, 74, 224, 0.1); }
   .table-neon tbody td { padding: 14px 16px; vertical-align: middle; font-size: 0.9rem; }
 
-  /* KLAS Khusus untuk Warna Font Data Tersimpan (Ungu Neon Terang) */
   .text-data-purple { color: #9D5EFF !important; font-weight: 500; }
 
   .btn-neon-pink {
@@ -152,7 +151,6 @@
   .badge-lunas { background-color: rgba(0, 245, 212, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 212, 0.3); }
   .badge-menunggu { background-color: rgba(255, 196, 0, 0.15); color: #FFC400; border: 1px solid rgba(255, 196, 0, 0.3); }
   .badge-batal { background-color: rgba(255, 77, 141, 0.15); color: var(--neon-pink); border: 1px solid rgba(255, 77, 141, 0.3); }
-  .badge-disini { background-color: rgba(100, 200, 255, 0.15); color: #64C8FF; border: 1px solid rgba(100, 200, 255, 0.3); }
 
   .form-control-neon, .form-select-neon {
     background-color: #0F162A;
@@ -192,7 +190,6 @@
   .bar-track { background: rgba(109, 74, 224, 0.2); border-radius: 10px; height: 8px; overflow: hidden; }
   .bar-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--purple-mid), var(--neon-mint)); box-shadow: 0 0 8px var(--neon-mint); }
 
-  /* Limit description text in table */
   .text-truncate-neon {
     max-width: 150px;
     overflow: hidden;
@@ -201,7 +198,6 @@
     display: inline-block;
   }
 
-  /* Kotak pengingat kredensial admin di layar login */
   .login-hint-box {
     margin-top: 20px;
     background: rgba(0, 245, 212, 0.06);
@@ -217,7 +213,6 @@
     letter-spacing: 0.8px;
     text-transform: uppercase;
     margin-bottom: 6px;
-    text-shadow: 0 0 8px rgba(0, 245, 212, 0.4);
   }
   .login-hint-box .hint-row {
     font-size: 0.82rem;
@@ -228,7 +223,7 @@
     padding: 2px 0;
   }
   .login-hint-box .hint-row span:first-child { color: var(--text-muted); }
-  .login-hint-box .hint-row span:last-child { color: #9D5EFF; font-weight: 600; letter-spacing: 0.3px; }
+  .login-hint-box .hint-row span:last-child { color: #9D5EFF; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -424,12 +419,12 @@
             <table class="table table-neon align-middle">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th>ID Tiket</th>
                   <th>Event</th>
                   <th>Nama Tiket</th>
                   <th>Deskripsi</th>
                   <th>Harga</th>
-                  <th>Kuota</th>
+                  <th>Kuota Tersisa</th>
                   <th>Status</th>
                   <th class="text-center">Aksi</th>
                 </tr>
@@ -445,15 +440,14 @@
         <div class="card-neon p-3 p-md-4 h-100 d-flex flex-column">
           <div class="d-flex justify-content-between align-items-center mb-4">
             <h5 class="text-white m-0">Data Pesanan Pelanggan</h5>
-            <!-- Tombol Buat Pesanan dihapus sesuai permintaan -->
           </div>
           <div class="table-responsive flex-grow-1">
             <table class="table table-neon align-middle">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th>ID Pesanan</th>
                   <th>Pemesan</th>
-                  <th>Tiket</th>
+                  <th>ID Tiket</th>
                   <th>Jml</th>
                   <th>Total</th>
                   <th>Status</th>
@@ -527,6 +521,20 @@
   const ADMIN_USERNAME = 'Gisya_XIRPL';
   const ADMIN_PASSWORD = 'gisya0admin';
 
+  // HELPER BACA FIELD Fleksibel
+  function getVal(obj, keys) {
+    if (!obj) return '';
+    for (let i = 0; i < keys.length; i++) {
+      const target = keys[i].toLowerCase().replace(/ /g, '_');
+      for (let k in obj) {
+        if (k.toLowerCase().replace(/ /g, '_') === target) {
+          if (obj[k] !== undefined && obj[k] !== '') return obj[k];
+        }
+      }
+    }
+    return '';
+  }
+
   document.getElementById('login-form').addEventListener('submit', function(e) {
     e.preventDefault();
     handleLogin();
@@ -564,10 +572,9 @@
     if(loggedIn){ enterApp(); }
   }
 
-  // ---------- KONEKSI SPREADSHEET ----------
-  // ISI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI DALAM TANDA KUTIP ""
+  // URL APPS SCRIPT
   const API_URL = "https://script.google.com/macros/s/AKfycbx0SUCHnJO4A6F72A0BdPZuGggWGAo5b0Y9YDjXbVjWBCC-K1fSaXlZrTyw1zj2lgkcyg/exec"; 
-  const API_AKTIF = API_URL.trim() !== "" && !API_URL.includes("XXXX");
+  const API_AKTIF = API_URL.trim() !== "";
 
   let events = [];
   let tickets = [];
@@ -577,9 +584,9 @@
     if(!API_AKTIF) return { events: [], tickets: [], orders: [] };
     const get = async (sheetKey) => {
       try {
-        const res = await fetch(`${API_URL}?action=read&sheet=${sheetKey}`, { method:'GET' });
+        const res = await fetch(`${API_URL}?action=read&sheet=${sheetKey}&_ts=${Date.now()}`, { method:'GET' });
         const json = await res.json();
-        return json.success ? json.data : [];
+        return (json && json.success !== false && Array.isArray(json.data)) ? json.data : [];
       } catch(e) { return []; }
     };
     const [eventsData, ticketsData, ordersData] = await Promise.all([ get('event'), get('tiket'), get('pesanan') ]);
@@ -611,11 +618,36 @@
     }
     try{
       const data = await apiLoad();
-      events = data.events || [];
-      tickets = data.tickets || [];
-      orders = data.orders || [];
+      events = data.events.map(e => ({
+        id_event: getVal(e, ['id_event', 'id']),
+        nama_event: getVal(e, ['nama_event', 'title', 'nama']),
+        tanggal: getVal(e, ['tanggal', 'date', 'dateLabel']),
+        lokasi: getVal(e, ['lokasi', 'location', 'venue']),
+        deskripsi_acara: getVal(e, ['deskripsi_acara', 'description', 'desc']),
+        status: getVal(e, ['status']) || 'AKTIF'
+      }));
+
+      tickets = data.tickets.map(t => ({
+        id_tiket: getVal(t, ['id_tiket', 'id']),
+        id_event: getVal(t, ['id_event']),
+        nama_tiket: getVal(t, ['nama_tiket', 'name', 'nama', 'tipe_tiket']),
+        deskripsi_tiket: getVal(t, ['deskripsi_tiket', 'desc', 'deskripsi']),
+        harga: Number(getVal(t, ['harga', 'price']) || 0),
+        kuota: Number(getVal(t, ['kuota', 'quota', 'stok']) || 0),
+        status: getVal(t, ['status']) || 'AKTIF'
+      }));
+
+      orders = data.orders.map(o => ({
+        id_pesanan: getVal(o, ['id_pesanan', 'id']),
+        id_tiket: getVal(o, ['id_tiket']),
+        nama_pesanan: getVal(o, ['nama_pesanan', 'nama_pemesan', 'nama']),
+        jumlah: Number(getVal(o, ['jumlah', 'qty']) || 1),
+        total_harga: Number(getVal(o, ['total_harga', 'total']) || 0),
+        status: getVal(o, ['status']) || 'Menunggu'
+      }));
+
       renderAll();
-      if(!diam) showToast('Data berhasil dimuat.');
+      if(!diam) showToast('Data berhasil diperbarui.');
     }catch(err){
       if(!diam) showToast('Gagal membaca spreadsheet.');
     }
@@ -638,7 +670,6 @@
     if(viewId === 'laporan') renderLaporan();
   }
 
-  // ---------- MODAL ----------
   function openModal(type, id){
     const modalEl = document.getElementById('dynamicModal');
     const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -648,7 +679,7 @@
 
     if(type === 'event'){
       title.innerText = id ? 'Edit Event' : 'Tambah Event';
-      const data = id ? events.find(e=> e.id_event === id) : {};
+      const data = id ? events.find(e=> String(e.id_event) === String(id)) : {};
       fields.innerHTML = `
         <div class="mb-3"><label class="form-label small label-neon-purple">Nama Event</label><input type="text" id="f-nama_event" value="${escapeAttr(data.nama_event || '')}" required class="form-control form-control-neon"></div>
         <div class="row g-3 mb-3">
@@ -667,8 +698,8 @@
       modalEl.dataset.type = 'event';
     } else if(type === 'tiket'){
       title.innerText = id ? 'Edit Tiket' : 'Tambah Tiket';
-      const data = id ? tickets.find(t=> t.id_tiket === id) : {};
-      const eventOptions = events.map(e=> `<option value="${e.id_event}" ${data.id_event === e.id_event ? 'selected' : ''}>${escapeHtml(e.nama_event)}</option>`).join('');
+      const data = id ? tickets.find(t=> String(t.id_tiket) === String(id)) : {};
+      const eventOptions = events.map(e=> `<option value="${e.id_event}" ${String(data.id_event) === String(e.id_event) ? 'selected' : ''}>${escapeHtml(e.nama_event)}</option>`).join('');
       fields.innerHTML = `
         <div class="mb-3"><label class="form-label small label-neon-purple">Pilih Event</label><select id="f-id_event" required class="form-select form-select-neon"><option value="" disabled ${!data.id_event ? 'selected' : ''}>Pilih Event</option>${eventOptions}</select></div>
         <div class="mb-3"><label class="form-label small label-neon-purple">Nama Tiket</label><input type="text" id="f-nama_tiket" value="${escapeAttr(data.nama_tiket || '')}" required class="form-control form-control-neon"></div>
@@ -698,7 +729,6 @@
     saveData();
   });
 
-  // ---------- SAVE (Optimistic UI) ----------
   async function saveData(){
     const modalEl = document.getElementById('dynamicModal');
     const bsModal = bootstrap.Modal.getInstance(modalEl);
@@ -720,12 +750,14 @@
       else { action = 'create'; successMsg = 'Event ditambahkan!'; }
     } else if(type === 'tiket'){
       sheetKey = 'tiket';
+      const kuotaVal = Number(document.getElementById('f-kuota').value);
       data = { 
         id_event: document.getElementById('f-id_event').value, 
         nama_tiket: document.getElementById('f-nama_tiket').value.trim(), 
         deskripsi_tiket: document.getElementById('f-deskripsi_tiket').value.trim(),
         harga: Number(document.getElementById('f-harga').value), 
-        kuota: Number(document.getElementById('f-kuota').value), 
+        kuota: kuotaVal,
+        quota: kuotaVal,
         status: document.getElementById('f-status').value 
       };
       if(editId){ action = 'update'; id = editId; successMsg = 'Tiket diperbarui!'; } 
@@ -734,72 +766,50 @@
 
     bsModal.hide();
     
-    // 1. Update lokal dulu agar instan
-    const idField = sheetKey === 'event' ? 'id_event' : 'id_tiket';
-    if (action === 'create') {
-      const newId = sheetKey.charAt(0).toUpperCase() + Date.now();
-      const newObj = { [idField]: newId, ...data };
-      if(sheetKey === 'event') events.push(newObj);
-      else if(sheetKey === 'tiket') tickets.push(newObj);
-    } else if (action === 'update') {
-      let arr = sheetKey === 'event' ? events : tickets;
-      const idx = arr.findIndex(item => String(item[idField]) === String(id));
-      if (idx > -1) Object.assign(arr[idx], data);
-    }
-    
-    renderAll();
-    showToast(successMsg);
-    
-    // 2. Kirim ke server
+    showToast('Menyimpan ke server...');
     if(API_AKTIF) {
       await apiRequest({ action, sheet: sheetKey, id, data });
-      await syncFromSpreadsheet(true); // Sync untuk dapatkan ID resmi dari server
+      await syncFromSpreadsheet(true);
+      showToast(successMsg);
     }
   }
 
-  // ---------- DELETE (Optimistic UI) ----------
   async function deleteData(type, id){
     if(!confirm('Yakin hapus data ini?')) return;
-    
-    // 1. Hapus lokal dulu agar instan
-    const idField = type === 'event' ? 'id_event' : 'id_tiket';
-    if (type === 'event') events = events.filter(item => String(item[idField]) !== String(id));
-    else if (type === 'tiket') tickets = tickets.filter(item => String(item[idField]) !== String(id));
-    
-    renderAll();
-    showToast('Data dihapus.');
-    
-    // 2. Kirim ke server
+    showToast('Menghapus...');
     if(API_AKTIF) {
       await apiRequest({ action: 'delete', sheet: type, id });
+      await syncFromSpreadsheet(true);
+      showToast('Data berhasil dihapus.');
     }
   }
 
   async function updateOrderStatus(id, newStatus){
-    // 1. Update lokal dulu
     const ord = orders.find(o => String(o.id_pesanan) === String(id));
     if (ord) ord.status = newStatus;
     
     renderAll();
     showToast('Status: ' + newStatus);
     
-    // 2. Kirim ke server
     if(API_AKTIF) {
       await apiRequest({ action: 'update', sheet: 'pesanan', id, data: { status: newStatus } });
     }
   }
 
-  // ---------- RENDER UI ----------
   function renderAll(){ renderEvents(); renderTickets(); renderOrders(); renderDashboard(); if(document.getElementById('laporan').classList.contains('active')) renderLaporan(); }
   
   function eventName(id){ const e = events.find(e=> String(e.id_event) === String(id)); return e ? e.nama_event : (id ? 'ID: ' + id : '-'); }
-  function ticketName(id){ const t = tickets.find(t=> String(t.id_tiket) === String(id)); return t ? t.nama_tiket : (id ? 'ID: ' + id : '-'); }
+  function ticketName(id){ 
+    const cleanId = String(id || '').replace(/^TIX_/, '');
+    const t = tickets.find(t=> String(t.id_tiket).replace(/^TIX_/, '') === cleanId); 
+    return t ? t.nama_tiket : (id ? 'ID: ' + id : '-'); 
+  }
 
   function renderDashboard(){
     document.getElementById('dash-events').innerText = events.length;
     document.getElementById('dash-tickets').innerText = tickets.length;
     document.getElementById('dash-orders').innerText = orders.length;
-    const revenue = orders.filter(o=> o.status === 'Lunas').reduce((sum,o)=> sum + Number(o.total_harga || 0), 0);
+    const revenue = orders.filter(o=> String(o.status).toLowerCase() === 'lunas').reduce((sum,o)=> sum + Number(o.total_harga || 0), 0);
     document.getElementById('dash-revenue').innerText = 'Rp ' + revenue.toLocaleString('id-ID');
     const recent = events.slice(-5).reverse();
     document.getElementById('dash-recent-events').innerHTML = recent.length ? recent.map(e=> `
@@ -814,8 +824,8 @@
     document.getElementById('event-empty').classList.toggle('d-none', events.length !== 0);
     tbody.innerHTML = events.map(e=> {
       let badgeClass = 'badge-menunggu';
-      if(e.status === 'AKTIF') badgeClass = 'badge-lunas';
-      else if(e.status === 'NONAKTIF') badgeClass = 'badge-batal';
+      if(String(e.status).toUpperCase() === 'AKTIF') badgeClass = 'badge-lunas';
+      else badgeClass = 'badge-batal';
       return `
       <tr>
         <td class="text-data-purple small">${e.id_event}</td>
@@ -837,16 +847,16 @@
     document.getElementById('tiket-empty').classList.toggle('d-none', tickets.length !== 0);
     tbody.innerHTML = tickets.map(t=> {
       let badgeClass = 'badge-menunggu';
-      if(t.status === 'AKTIF') badgeClass = 'badge-lunas';
-      else if(t.status === 'NONAKTIF') badgeClass = 'badge-batal';
+      if(String(t.status).toUpperCase() === 'AKTIF') badgeClass = 'badge-lunas';
+      else badgeClass = 'badge-batal';
       return `
       <tr>
         <td class="text-data-purple small">${t.id_tiket}</td>
         <td class="text-data-purple">${escapeHtml(eventName(t.id_event))}</td>
         <td class="text-data-purple fw-medium">${escapeHtml(t.nama_tiket)}</td>
-        <td class="text-data-purple"><span class="text-truncate-neon" title="${escapeAttr(t.deskripsi_acara || '')}">${escapeHtml(t.deskripsi_acara || '-')}</span></td>
+        <td class="text-data-purple"><span class="text-truncate-neon" title="${escapeAttr(t.deskripsi_tiket || '')}">${escapeHtml(t.deskripsi_tiket || '-')}</span></td>
         <td class="text-data-purple">Rp ${Number(t.harga).toLocaleString('id-ID')}</td>
-        <td class="text-data-purple">${t.kuota}</td>
+        <td class="text-data-purple fw-bold" style="color: var(--neon-mint) !important;">${t.kuota}</td>
         <td><span class="badge ${badgeClass}">${escapeHtml(t.status)}</span></td>
         <td class="text-center">
           <button onclick="openModal('tiket','${t.id_tiket}')" class="btn btn-sm btn-ghost-purple py-1 px-2 me-1">Edit</button>
@@ -860,9 +870,10 @@
     const tbody = document.getElementById('pesanan-tbody');
     document.getElementById('pesanan-empty').classList.toggle('d-none', orders.length !== 0);
     tbody.innerHTML = orders.map(o=>{
+      const st = String(o.status || '').toLowerCase();
       let badgeClass = 'badge-menunggu';
-      if(o.status === 'Lunas') badgeClass = 'badge-lunas';
-      else if(o.status === 'Batal') badgeClass = 'badge-batal';
+      if(st === 'lunas') badgeClass = 'badge-lunas';
+      else if(st === 'batal') badgeClass = 'badge-batal';
       return `
       <tr>
         <td class="text-data-purple small">${o.id_pesanan}</td>
@@ -873,9 +884,9 @@
         <td><span class="badge ${badgeClass}">${o.status}</span></td>
         <td class="text-center">
           <select onchange="updateOrderStatus('${o.id_pesanan}', this.value)" class="form-select form-select-sm form-select-neon d-inline-block w-auto" style="font-size: 0.8rem;">
-            <option value="Menunggu" ${o.status === 'Menunggu' ? 'selected' : ''}>Menunggu</option>
-            <option value="Lunas" ${o.status === 'Lunas' ? 'selected' : ''}>Lunas</option>
-            <option value="Batal" ${o.status === 'Batal' ? 'selected' : ''}>Batal</option>
+            <option value="menunggu" ${st === 'menunggu' ? 'selected' : ''}>Menunggu</option>
+            <option value="Lunas" ${st === 'lunas' ? 'selected' : ''}>Lunas</option>
+            <option value="Batal" ${st === 'batal' ? 'selected' : ''}>Batal</option>
           </select>
         </td>
       </tr>`;
@@ -883,10 +894,10 @@
   }
 
   function renderLaporan(){
-    const lunas = orders.filter(o=> o.status === 'Lunas');
+    const lunas = orders.filter(o=> String(o.status).toLowerCase() === 'lunas');
     const revenue = lunas.reduce((sum,o)=> sum + Number(o.total_harga || 0), 0);
     const sold = lunas.reduce((sum,o)=> sum + Number(o.jumlah || 0), 0);
-    const pending = orders.filter(o=> o.status === 'Menunggu').length;
+    const pending = orders.filter(o=> String(o.status).toLowerCase() === 'menunggu').length;
     document.getElementById('lap-revenue').innerText = 'Rp ' + revenue.toLocaleString('id-ID');
     document.getElementById('lap-sold').innerText = sold;
     document.getElementById('lap-pending').innerText = pending;
@@ -907,7 +918,7 @@
 
     const statuses = ['Menunggu', 'Lunas', 'Batal'];
     document.getElementById('lap-status').innerHTML = statuses.map(s=>{
-      const count = orders.filter(o=> o.status === s).length;
+      const count = orders.filter(o=> String(o.status).toLowerCase() === s.toLowerCase()).length;
       return `<div class="col-6 col-md-3"><div class="card-stat"><p class="fs-4 fw-bold text-white m-0">${count}</p><p class="small text-muted mt-1 m-0">${s}</p></div></div>`;
     }).join('');
   }
